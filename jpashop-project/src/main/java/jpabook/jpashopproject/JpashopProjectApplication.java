@@ -12,6 +12,7 @@ public class JpashopProjectApplication {
 		SpringApplication.run(JpashopProjectApplication.class, args);
 	}
 
+	// 프록시 객체는 API 응답으로 보내지 않도록 하기위해 등록
 	@Bean
 	public Hibernate5Module hibernate5Module() {
 		return new Hibernate5Module();
