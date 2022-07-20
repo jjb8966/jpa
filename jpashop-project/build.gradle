@@ -27,6 +27,9 @@ dependencies {
 	implementation 'mysql:mysql-connector-java'
 	implementation 'junit:junit:4.13.2'
 
+	implementation 'com.fasterxml.jackson.datatype:jackson-datatype-hibernate5'
+
+
 	compileOnly 'org.projectlombok:lombok'
 	runtimeOnly 'com.h2database:h2'
 

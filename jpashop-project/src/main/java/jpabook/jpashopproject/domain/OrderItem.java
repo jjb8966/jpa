@@ -1,5 +1,6 @@
 package jpabook.jpashopproject.domain;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jpabook.jpashopproject.domain.item.Item;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -22,6 +23,7 @@ public class OrderItem {
     @JoinColumn(name = "item_id")
     private Item item;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id")
     private Order order;
@@ -29,7 +31,7 @@ public class OrderItem {
     private int orderPrice;
     private int count;
 
-    // jpa에서 protected -> 쓰지 마라!!!
+    // jpa에서 protected -> 생성자 쓰지 마라!!!
 //    protected OrderItem() {} -> 롬복 사용 가능
 
     // 생성 메소드
