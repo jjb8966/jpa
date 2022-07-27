@@ -3,9 +3,12 @@ package study.datajpa.repository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.annotation.Commit;
 import org.springframework.transaction.annotation.Transactional;
 import study.datajpa.entity.Member;
 
+import javax.persistence.EntityManager;
+import javax.persistence.PersistenceContext;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -16,6 +19,8 @@ class MemberJpaRepositoryTest {
 
     @Autowired
     MemberJpaRepository memberJpaRepository;
+    @PersistenceContext
+    EntityManager em;
 
     @Test
     public void testMember() {
@@ -76,5 +81,52 @@ class MemberJpaRepositoryTest {
 
         List<Member> result = memberJpaRepository.findByUsername("aaa");
         assertThat(result.get(0)).isEqualTo(m1);
+    }
+
+    @Test
+    public void paging() {
+        memberJpaRepository.save(new Member("member1", 10));
+        memberJpaRepository.save(new Member("member2", 10));
+        memberJpaRepository.save(new Member("member3", 10));
+        memberJpaRepository.save(new Member("member4", 10));
+        memberJpaRepository.save(new Member("member5", 10));
+
+        int age = 10;
+        int offset = 0;
+        int limit = 3;
+
+        List<Member> members = memberJpaRepository.findByPage(age, offset, limit);
+        long totalCount = memberJpaRepository.totalCount(10);
+
+        for (Member member : members) {
+            System.out.println("member = " + member);
+        }
+
+        assertThat(members.size()).isEqualTo(3);
+        assertThat(totalCount).isEqualTo(5);
+    }
+
+    @Test
+    public void bulkUpdate() {
+        memberJpaRepository.save(new Member("member1", 10));
+        memberJpaRepository.save(new Member("member2", 15));
+        memberJpaRepository.save(new Member("member3", 20));
+        memberJpaRepository.save(new Member("member4", 25));
+        memberJpaRepository.save(new Member("member5", 30));
+
+        // update 쿼리를 날리면(JPQL) update 전에 영속성 컨텍스트가 flush 하여 만들어둔 멤버를 DB에 저장함
+        int resultCount = memberJpaRepository.bulkAgePlus(20);
+
+        // 벌크성 쿼리를 날리는 경우 DB에 직접 쿼리를 날리는 것이기 때문에 영속성 컨텍스트가 변화를 인지하지 못함
+        // 영속성 컨텍스트를 초기화하여 변화된 DB의 정보를 다시 읽어와야 함!
+        em.clear();     // 영속성 컨텍스트 초기화
+
+        // DB에 쿼리를 날려 다시 읽어옴
+        // 초기화하지 않으면 영속성 컨텍스트의 캐시 정보를 읽기 때문에 변화된 데이터를 읽을 수 없음
+        List<Member> result = memberJpaRepository.findByUsername("member3");
+        Member member = result.get(0);
+        System.out.println("member.getAge() = " + member.getAge());
+
+        assertThat(resultCount).isEqualTo(3);
     }
 }
