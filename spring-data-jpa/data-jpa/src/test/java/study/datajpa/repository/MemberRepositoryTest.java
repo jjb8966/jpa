@@ -5,7 +5,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.Sort;
 import org.springframework.transaction.annotation.Transactional;
 import study.datajpa.dto.MemberDto;
@@ -347,5 +346,75 @@ class MemberRepositoryTest {
         // BaseEntity 상속했을 때 추가되는 정보
         System.out.println("findMember.getCreatedBy() = " + findMember.getCreatedBy());
         System.out.println("findMember.getLastModifiedBy() = " + findMember.getLastModifiedBy());
+    }
+
+    @Test
+    public void projection_test() {
+        Team teamA = new Team("teamA");
+        em.persist(teamA);
+
+        Member memberA = new Member("m1", 0, teamA);
+        Member memberB = new Member("m2", 0, teamA);
+        em.persist(memberA);
+        em.persist(memberB);
+
+        em.flush();
+        em.clear();
+
+        List<ProjectionUsernameOnly> result1 = memberRepository.findProjectionByUsername("m1");
+        List<ProjectionUsernameAndAgeAndTeamName> result2 = memberRepository.findMoreProjectionByUsername("m1");
+        List<ProjectionUsernameOnlyDto> result3 = memberRepository.findClassProjectionByUsername("m1", ProjectionUsernameOnlyDto.class);
+
+        for (ProjectionUsernameOnly username : result1) {
+            System.out.println("username = " + username.getUsername());
+        }
+
+        for (ProjectionUsernameAndAgeAndTeamName data : result2) {
+            System.out.println("username, age, teamName = " + data.getUsernameAndAgeAndTeamName());
+        }
+
+        for (ProjectionUsernameOnlyDto username : result3) {
+            System.out.println("username = " + username.getUsername());
+        }
+    }
+
+    @Test
+    public void native_query_test() {
+        Team teamA = new Team("teamA");
+        em.persist(teamA);
+
+        Member memberA = new Member("m1", 0, teamA);
+        Member memberB = new Member("m2", 0, teamA);
+        em.persist(memberA);
+        em.persist(memberB);
+
+        em.flush();
+        em.clear();
+
+        Member findMember = memberRepository.findByNativeQuery("m1");
+
+        assertThat(findMember.getUsername()).isEqualTo("m1");
+    }
+
+    @Test
+    public void native_projection_test() {
+        Team teamA = new Team("teamA");
+        em.persist(teamA);
+
+        Member memberA = new Member("m1", 0, teamA);
+        Member memberB = new Member("m2", 0, teamA);
+        em.persist(memberA);
+        em.persist(memberB);
+
+        em.flush();
+        em.clear();
+
+        Page<MemberProjection> result = memberRepository.findByNativeProjection(PageRequest.of(0, 5));
+
+        for (MemberProjection memberProjection : result) {
+            System.out.println("memberProjection.getUsername() = " + memberProjection.getUsername());
+            System.out.println("memberProjection.getId() = " + memberProjection.getId());
+            System.out.println("memberProjection.getTeamName() = " + memberProjection.getTeamName());
+        }
     }
 }
