@@ -259,4 +259,93 @@ class MemberRepositoryTest {
 
         assertThat(resultCount).isEqualTo(3);
     }
+
+    @Test
+    public void findMemberLazy() {
+        Team teamA = new Team("teamA");
+        Team teamB = new Team("teamB");
+        teamRepository.save(teamA);
+        teamRepository.save(teamB);
+
+        Member member1 = new Member("member1", 10, teamA);
+        Member member2 = new Member("member1", 20, teamB);
+        memberRepository.save(member1);
+        memberRepository.save(member2);
+
+        em.flush();
+        em.clear();
+
+        List<Member> members = memberRepository.findAll();
+
+        // fetch join으로 N+1 문제 해결
+        //List<Member> members = memberRepository.findMemberFetchJoin();
+        //List<Member> members = memberRepository.findAll(); -> 오버라이딩
+        //List<Member> members = memberRepository.findEntityGraph();
+        //List<Member> members = memberRepository.findEntityGraphByUsername("member1");
+
+        // N + 1 문제 발생
+        // 1 -> select member 1번
+        // N -> select team x N번
+        for (Member member : members) {
+            System.out.println("member.getUsername() = " + member.getUsername());
+            System.out.println("member.getTeam().getClass() = " + member.getTeam().getClass());
+            System.out.println("member.getTeam() = " + member.getTeam().getName());
+        }
+    }
+
+    @Test
+    public void queryHint() {
+        Member member = new Member("member", 10);
+        memberRepository.save(member);
+
+        em.flush();
+        em.clear();
+
+//        Member findMember = memberRepository.findMemberByUsername("member");
+
+        // 복사본(스냅샷)이 없기 때문에 변경 감지를 하지 않고 update 쿼리를 날리지 않음!!
+        Member findMember = memberRepository.findReadOnlyByUsername("member");
+        findMember.setUsername("newMember");
+
+        em.flush();
+    }
+
+    @Test
+    public void lock() {
+        Member member = new Member("member", 10);
+        memberRepository.save(member);
+
+        em.flush();
+        em.clear();
+
+        // select for update
+        Member findMember = memberRepository.findLockByUsername("member");
+    }
+
+    @Test
+    public void callCustom() {
+        List<Member> result = memberRepository.findMemberCustom();
+    }
+
+    @Test
+    public void jpaBaseEntity() throws InterruptedException {
+        Member member = new Member("member1");
+        memberRepository.save(member);  // @PrePersist
+
+        Thread.sleep(1000);
+        member.setUsername("member2");
+
+        em.flush(); // @PreUpdate
+        em.clear();
+
+        Member findMember = memberRepository.findById(member.getId()).get();
+
+        // BaseTimeEntity만 상속했을 때
+        System.out.println("findMember.getCreatedTime() = " + findMember.getCreatedDate());
+        System.out.println("findMember.getUpdatedTime() = " + findMember.getLastModifiedDate());
+
+        // BaseEntity 상속했을 때 추가되는 정보
+        System.out.println("findMember.getCreatedBy() = " + findMember.getCreatedBy());
+        System.out.println("findMember.getLastModifiedBy() = " + findMember.getLastModifiedBy());
+    }
 }
