@@ -2,6 +2,8 @@ package study.datajpa.repository;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 import study.datajpa.dto.MemberDto;
@@ -39,13 +41,29 @@ public interface MemberRepository extends JpaRepository<Member, Long>, MemberRep
     Optional<Member> findOptionalByUsername(String username);   // 단건(Optional) 리턴
 
     /**
+     * 페이징 & 정렬
+     *  - 파라미터 -> Pageable, Sort
+     *  - 리턴 타입 -> Page, Slice, List
+     * Page -> count 쿼리 o
+     * Slice -> count 쿼리 x, 다음 페이지 확인 o
+     * List -> count 쿼리 x, 결과만 조회
+     */
+    // 페이징 + 정렬
+//    Page<Member> findByAgeGreaterThanEqual(int age, Pageable pageable);
+    Slice<Member> findByAgeGreaterThanEqual(int age, Pageable pageable);
+
+    // 정렬만
+    Slice<Member> findByAgeGreaterThanEqual(int age, Sort sort);
+    //List<Member> findByAgeGreaterThan(int age, Sort sort);
+
+    /**
      * 다른 테이블과 조인한 결과에서 페이징 해야할 경우
      * 조인한 결과에서 카운팅하므로 카운팅 쿼리로 인한 성능이 저하가 있을 수 있음
      * -> 카운팅 쿼리를 분리하여 해결함
      */
-    @Query(value = "select m from Member m left join m.team t",
+    @Query(value = "select m from Member m left join m.team t where m.age >= :age",
             countQuery = "select count(m) from Member m")
-    Page<Member> findByAge(int age, Pageable pageable);
+    Page<Member> findByAge(@Param("age") int age, Pageable pageable);
     //Slice<Member> findByAge(int age, Pageable pageable);
     //List<Member> findByAge(int age, Pageable pageable);
 
@@ -58,7 +76,7 @@ public interface MemberRepository extends JpaRepository<Member, Long>, MemberRep
     @Query("select m from Member m left join fetch m.team")
     List<Member> findMemberFetchJoin();
 
-    // 2.findAll() 메소드 오버라이딩 + @EntityGraph
+    // 2. @EntityGraph + findAll() 메소드 오버라이딩
     @Override
     @EntityGraph(attributePaths = {"team"})
     List<Member> findAll();
@@ -92,4 +110,5 @@ public interface MemberRepository extends JpaRepository<Member, Long>, MemberRep
             countQuery = "select count(*) from member",
             nativeQuery = true)
     Page<MemberProjection> findByNativeProjection(Pageable pageable);
+
 }

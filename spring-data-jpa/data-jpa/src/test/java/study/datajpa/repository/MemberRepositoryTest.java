@@ -1,11 +1,11 @@
 package study.datajpa.repository;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.*;
+import org.springframework.test.annotation.Commit;
 import org.springframework.transaction.annotation.Transactional;
 import study.datajpa.dto.MemberDto;
 import study.datajpa.entity.Member;
@@ -200,44 +200,103 @@ class MemberRepositoryTest {
     }
 
     @Test
-    public void paging() {
-        memberRepository.save(new Member("member1", 10));
-        memberRepository.save(new Member("member2", 10));
+    @DisplayName("리턴 타입은 Page이고 파라미터로 Pageable을 받는 메소드 사용")
+    public void page_pageable() {
+        memberRepository.save(new Member("member1", 5));
+        memberRepository.save(new Member("member2", 8));
         memberRepository.save(new Member("member3", 10));
-        memberRepository.save(new Member("member4", 10));
-        memberRepository.save(new Member("member5", 10));
+        memberRepository.save(new Member("member4", 12));
+        memberRepository.save(new Member("member5", 14));
+        memberRepository.save(new Member("member6", 16));
+        memberRepository.save(new Member("member7", 18));
 
         int age = 10;
-//        int offset = 1;
-//        int limit = 3;
 
         PageRequest pageRequest = PageRequest.of(0, 3, Sort.by(Sort.Direction.DESC, "username"));
 
-//        List<Member> members = memberRepository.findByAge(age, offset, limit);
-//        long totalCount = memberRepository.totalCount(10);
-
-        // 리턴타입이 Page인 경우 totalCount도 자동으로 구해줌
-        Page<Member> page = memberRepository.findByAge(age, pageRequest);
+        // 리턴타입이 Slice인 경우 totalCount 구하지 않음
+        Slice<Member> slice = memberRepository.findByAgeGreaterThanEqual(age, pageRequest);
 
         // 엔티티 -> DTO
-        Page<MemberDto> toMap = page.map(member -> new MemberDto(member.getId(), member.getUsername(), null));
+        Slice<MemberDto> map = slice.map(member -> new MemberDto(member.getId(), member.getUsername(), null));
 
-        List<Member> members = page.getContent();
-        long totalCount = page.getTotalElements();
+        List<Member> members = slice.getContent();
+//        long totalCount = slice.getTotalElements();
 
         for (Member member : members) {
             System.out.println("member = " + member);
         }
 
+        assertThat(members.size()).isEqualTo(3);
+
+        assertThat(slice.getNumber()).isEqualTo(0);      // 페이지 숫자
+        assertThat(slice.isFirst()).isTrue();                    // 첫번째 페이지인지
+        assertThat(slice.hasNext()).isTrue();                    // 다음 페이지가 있는지
+    }
+
+    @Test
+    @DisplayName("리턴 타입은 Slice이고 Sort를 받는 메소드 사용")
+    public void paging() {
+        memberRepository.save(new Member("member1", 5));
+        memberRepository.save(new Member("member2", 8));
+        memberRepository.save(new Member("member3", 10));
+        memberRepository.save(new Member("member4", 12));
+        memberRepository.save(new Member("member5", 14));
+        memberRepository.save(new Member("member6", 16));
+        memberRepository.save(new Member("member7", 18));
+
+        int age = 10;
+
+        Sort sort = Sort.by(Sort.Direction.DESC, "username");
+
+        // 리턴타입이 Slice인 경우 totoalCount는 조회하지 않음
+        Slice<Member> slice = memberRepository.findByAgeGreaterThanEqual(age, sort);
+
+        // 엔티티 -> DTO
+        Slice<MemberDto> map = slice.map(member -> new MemberDto(member.getId(), member.getUsername(), null));
+
+        List<Member> members = slice.getContent();
+//        long totalCount = slice.getTotalElements();
+
+        for (Member member : members) {
+            System.out.println("member = " + member);
+        }
+
+        // 페이징 x, 정렬만
+        assertThat(members.size()).isEqualTo(5);
+
+        assertThat(slice.getNumber()).isEqualTo(0);      // 페이지 숫자
+        assertThat(slice.isFirst()).isTrue();                    // 첫번째 페이지인지
+    }
+
+    @Test
+    @DisplayName("여러 엔티티를 조인하여 조회하는 경우")
+    @Commit
+    public void count() {
+        memberRepository.save(new Member("member1", 5));
+        memberRepository.save(new Member("member2", 8));
+        memberRepository.save(new Member("member3", 10));
+        memberRepository.save(new Member("member4", 12));
+        memberRepository.save(new Member("member5", 14));
+        memberRepository.save(new Member("member6", 16));
+        memberRepository.save(new Member("member7", 18));
+
+        int age = 10;
+
+        PageRequest pageRequest = PageRequest.of(0, 3, Sort.by(Sort.Direction.DESC, "username"));
+
+        Page<Member> result = memberRepository.findByAge(age, pageRequest);
+
+        List<Member> content = result.getContent();
+        long totalCount = result.getTotalElements();
+
+        for (Member member : content) {
+            System.out.println("member = " + member);
+        }
+
         System.out.println("totalCount = " + totalCount);
 
-        assertThat(members.size()).isEqualTo(3);
-        assertThat(totalCount).isEqualTo(5);
-
-        assertThat(page.getNumber()).isEqualTo(0);      // 페이지 숫자
-        assertThat(page.getTotalPages()).isEqualTo(2);  // 총 페이지 수
-        assertThat(page.isFirst()).isTrue();                    // 첫번째 페이지인지
-        assertThat(page.hasNext()).isTrue();                    // 다음 페이지가 있는지
+        assertThat(content.size()).isEqualTo(3);
     }
 
     @Test
@@ -250,13 +309,14 @@ class MemberRepositoryTest {
 
         int resultCount = memberRepository.bulkAgePlus(20);
 
+        assertThat(resultCount).isEqualTo(3);
+
         //em.clear(); -> @Modifying(clearAutomatically = true)
 
         List<Member> result = memberRepository.findByUsername("member3");
-        Member member = result.get(0);
-        System.out.println("member.getAge() = " + member.getAge());
+        Member findMember = result.get(0);
 
-        assertThat(resultCount).isEqualTo(3);
+        assertThat(findMember.getAge()).isEqualTo(21);
     }
 
     @Test
@@ -267,7 +327,7 @@ class MemberRepositoryTest {
         teamRepository.save(teamB);
 
         Member member1 = new Member("member1", 10, teamA);
-        Member member2 = new Member("member1", 20, teamB);
+        Member member2 = new Member("member2", 20, teamB);
         memberRepository.save(member1);
         memberRepository.save(member2);
 
@@ -287,7 +347,7 @@ class MemberRepositoryTest {
         // N -> select team x N번
         for (Member member : members) {
             System.out.println("member.getUsername() = " + member.getUsername());
-            System.out.println("member.getTeam().getClass() = " + member.getTeam().getClass());
+//            System.out.println("member.getTeam().getClass() = " + member.getTeam().getClass());
             System.out.println("member.getTeam() = " + member.getTeam().getName());
         }
     }

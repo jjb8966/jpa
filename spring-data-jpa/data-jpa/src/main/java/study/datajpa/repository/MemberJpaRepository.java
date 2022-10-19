@@ -59,7 +59,7 @@ public class MemberJpaRepository {
     }
 
     public List<Member> findByPage(int age, int offset, int limit) {
-        return em.createQuery("select m from Member m where m.age = :age order by m.username desc")
+        return em.createQuery("select m from Member m where m.age >= :age order by m.username desc")
                 .setParameter("age", age)
                 .setFirstResult(offset)     // 데이터를 어디서부터
                 .setMaxResults(limit)       // 몇 개를 가져올 건지
