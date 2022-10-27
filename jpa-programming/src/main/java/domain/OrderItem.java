@@ -1,5 +1,6 @@
 package domain;
 
+import domain.item.Item;
 import lombok.Data;
 
 import javax.persistence.*;

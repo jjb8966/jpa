@@ -1,4 +1,7 @@
 import domain.Member;
+import domain.item.Book;
+import domain.item.Item;
+import lombok.extern.slf4j.Slf4j;
 
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
@@ -15,6 +18,13 @@ public class JpaProgramming {
         tx.begin();
 
         try {
+            Book book = new Book();
+            book.setName("a");
+            book.setPrice(100);
+            book.setAuthor("aa");
+            book.setIsbn("aaa");
+            em.persist(book);
+
             tx.commit();
         } catch (Exception e) {
             tx.rollback();

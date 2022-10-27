@@ -8,10 +8,12 @@
     <!--보통 DB 하나 당 persistence-unit 1개 만듦-->
     <persistence-unit name="jpa-programming">
         <class>domain.Member</class>
+        <class>domain.Team</class>
         <class>domain.Order</class>
         <class>domain.Delivery</class>
         <class>domain.OrderItem</class>
-        <class>domain.Item</class>
+        <class>domain.item.Item</class>
+        <class>domain.item.Book</class>
         <class>domain.Category</class>
 
         <properties>

@@ -16,11 +16,15 @@ public class Member {
     private Long id;
 
     private String name;
+    private Integer age;
 
     @Embedded
     private Address address;
 
-    @OneToMany(mappedBy = "member")
+    @OneToMany(mappedBy = "member", orphanRemoval = true)
     private List<Order> orders = new ArrayList<>();
 
+    @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
+    @JoinColumn(name = "team_id")
+    private Team team;
 }
