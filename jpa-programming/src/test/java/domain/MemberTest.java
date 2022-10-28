@@ -2,6 +2,7 @@ package domain;
 
 import dto.MemberDto;
 import lombok.extern.slf4j.Slf4j;
+import org.hibernate.Hibernate;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -10,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import javax.persistence.*;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.*;
@@ -250,4 +252,203 @@ public class MemberTest {
         }
     }
 
+    @Test
+    void 묵시적_내부_조인() {
+        Member member = new Member();
+        member.setName("memberA");
+        em.persist(member);
+
+        Team team = new Team();
+        team.setName("teamA");
+        em.persist(team);
+
+        List members = em.createQuery("select t.members from Team t")
+                .getResultList();
+
+        for (Object o : members) {
+            System.out.println("o = " + o);
+        }
+    }
+
+    @Test
+    void 페치_조인_사용x() {
+        Team team = new Team();
+        team.setName("teamA");
+        em.persist(team);
+
+        Member member = new Member();
+        member.setName("memberA");
+        member.setTeam(team);
+        em.persist(member);
+
+        em.flush();
+        em.clear();
+
+        Member findMember = em.createQuery("select m from Member m", Member.class)
+                .getSingleResult();
+
+        // team 프록시 조회
+        Team findTeam = findMember.getTeam();
+        System.out.println("findTeam.getClass() = " + findTeam.getClass());
+
+        // team 프록시 사용 -> 실제 target 조회 (프록시 초기화)
+        findTeam.getName();
+
+        // 하이버네이트를 통한 프록시 강제 초기화
+        //Hibernate.initialize(findTeam);
+    }
+
+    @Test
+    void 페치_조인_사용o() {
+        Team team = new Team();
+        team.setName("teamA");
+        em.persist(team);
+
+        Member member = new Member();
+        member.setName("memberA");
+        member.setTeam(team);
+        em.persist(member);
+
+        em.flush();
+        em.clear();
+
+        // member 조회 시 Team 테이블도 조인 후 team에 대한 모든 데이터도 같이 조회
+        // 조회 결과는 Member만 나오지만 실제 쿼리는 Team에 대한 쿼리도 날린 상태
+        Object findObject = em.createQuery("select m from Member m join fetch m.team")
+                .getSingleResult();
+
+        // findObject.getClass() = class domain.Member
+        System.out.println("findObject.getClass() = " + findObject.getClass());
+
+        // 동일한 쿼리
+        // 실제 조회 결과는 다름 (Member 타입으로 조회 못함)
+        // Object findMemberAndTeam = em.createQuery("select m, t from Member m join m.team t")
+        //        .getSingleResult();
+
+        // 프록시가 아닌 실제 객체
+        Member findMember = (Member) findObject;
+        Team findTeam = findMember.getTeam();
+        System.out.println("findTeam.getClass() = " + findTeam.getClass());
+
+        // Team 테이블 조회 없이 바로 사용
+        findTeam.getName();
+    }
+
+    @Test
+    void 일반_조인_사용() {
+        Team team = new Team();
+        team.setName("teamA");
+        em.persist(team);
+
+        Member member = new Member();
+        member.setName("memberA");
+        member.setTeam(team);
+        em.persist(member);
+
+        em.flush();
+        em.clear();
+
+        // 조인은 했지만 데이터 조회는 Member만 한 상태
+        Member findMember = em.createQuery("select m from Member m join m.team t", Member.class)
+                .getSingleResult();
+
+        // Team 데이터를 조회하지 않았으므로 프록시 객체
+        Team findTeam = findMember.getTeam();
+        System.out.println("findTeam.getClass() = " + findTeam.getClass());
+
+        // 프록시 초기화
+        findTeam.getName();
+    }
+
+    @Test
+    @DisplayName("컬렉션 값 연관 필드는 페치 조인 후 페이징 처리할 수 없음")
+    void 페치조인_한계() {
+        for (int i = 0; i < 5; i++) {
+            Team team = new Team();
+            team.setName("team" + i);
+            em.persist(team);
+
+            for (int j = 0; j < 5; j++) {
+                Member member = new Member();
+                member.setName("member" + j);
+                member.setTeam(team);
+                em.persist(member);
+            }
+        }
+
+        em.flush();
+        em.clear();
+
+        List<Team> teams = em.createQuery("select t from Team t join fetch t.members", Team.class)
+                .setFirstResult(0)
+                .setMaxResults(3)
+                .getResultList();
+
+        for (Team team : teams) {
+            System.out.println("team.getName() = " + team.getName());
+        }
+    }
+
+    @Test
+    void 다대일_조회로_페이징() {
+        for (int i = 0; i < 5; i++) {
+            Team team = new Team();
+            team.setName("team" + i);
+            em.persist(team);
+
+            for (int j = 0; j < 5; j++) {
+                Member member = new Member();
+                member.setName("member" + j);
+                member.setTeam(team);
+                em.persist(member);
+            }
+        }
+
+        em.flush();
+        em.clear();
+
+        //List<Team> teams = em.createQuery("select t from Team t join fetch t.members", Team.class)
+        //        .setFirstResult(0)
+        //        .setMaxResults(3)
+        //        .getResultList();
+
+        List<Member> members = em.createQuery("select m from Member m join fetch m.team", Member.class)
+                .setFirstResult(0)
+                .setMaxResults(15)
+                .getResultList();
+
+        for (Member member : members) {
+            System.out.println("member = " + member.getName() + ", team = " + member.getTeam().getName());
+        }
+    }
+
+    @Test
+    void 단일_엔티티_조회_후_프록시_초기화() {
+        for (int i = 0; i < 5; i++) {
+            Team team = new Team();
+            team.setName("team" + i);
+            em.persist(team);
+
+            for (int j = 0; j < 5; j++) {
+                Member member = new Member();
+                member.setName("member" + j);
+                member.setTeam(team);
+                team.getMembers().add(member);
+                em.persist(member);
+            }
+        }
+
+        em.flush();
+        em.clear();
+
+        List<Team> teams = em.createQuery("select t from Team t", Team.class)
+                .setFirstResult(0)
+                .setMaxResults(3)
+                .getResultList();
+
+        for (Team team : teams) {
+            System.out.println("team.getName() = " + team.getName());
+            Hibernate.initialize(team.getMembers());
+        }
+    }
 }
