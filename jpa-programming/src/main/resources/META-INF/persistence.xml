@@ -15,6 +15,7 @@
         <class>domain.item.Item</class>
         <class>domain.item.Book</class>
         <class>domain.Category</class>
+        <class>domain.item.Movie</class>
 
         <properties>
             <property name="javax.persistence.jdbc.driver" value="org.h2.Driver"/>

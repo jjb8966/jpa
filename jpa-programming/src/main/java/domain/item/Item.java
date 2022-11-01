@@ -11,13 +11,13 @@ import java.util.List;
 @Data
 @Inheritance(strategy = InheritanceType.JOINED)
 @DiscriminatorColumn(name = "what_kind_of_item")
-public class Item {
+public abstract class Item {
 
     @Id
     @GeneratedValue
     @Column(name = "item_id")
-    private Long id;
+    protected Long id;
 
-    private String name;
-    private int price;
+    protected String name;
+    protected int price;
 }
