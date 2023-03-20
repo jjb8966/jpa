@@ -1,5 +1,6 @@
 package domain;
 
+import lombok.EqualsAndHashCode;
 import status.OrderStatus;
 import lombok.Data;
 

@@ -6,6 +6,7 @@ import domain.item.Movie;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import javax.persistence.EntityManager;
@@ -154,5 +155,20 @@ public class ItemTest {
         assertThat(resultAfterClear).as("초기화 후")
                 .extracting("price")
                 .contains(10, 20, 30, 40);
+    }
+
+    @Test
+    @DisplayName("table per class 전략은 슈퍼 타입 테이블로 조회 시 효율이 엄청 떨어짐")
+    void table_per_class() {
+        Book book = new Book();
+        book.setName("bookA");
+        em.persist(book);
+
+        em.flush();
+        em.clear();
+
+        Item item = em.find(Item.class, book.getId());
+
+        assertThat(item.getName()).isEqualTo(book.getName());
     }
 }

@@ -9,8 +9,9 @@ import java.util.List;
 
 @Entity
 @Data
-@Inheritance(strategy = InheritanceType.JOINED)
-@DiscriminatorColumn(name = "what_kind_of_item")
+@Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
+//@Inheritance(strategy = InheritanceType.JOINED)
+//@DiscriminatorColumn(name = "what_kind_of_item")
 public abstract class Item {
 
     @Id
